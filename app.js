@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
 
-let bank=Array.isArray(window.QUESTIONS)?window.QUESTIONS:[];
+let bank=(typeof QUESTIONS!=="undefined"&&Array.isArray(QUESTIONS))?QUESTIONS:[];
 let session=[],idx=0,score=0,answered=false,mode="training",answers=[],lastSession=[],timerId=null,timeLeft=0;
 
 const getWrong=()=>JSON.parse(localStorage.getItem("netplus_wrong")||"[]");

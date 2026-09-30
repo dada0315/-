@@ -335,45 +335,45 @@ refreshHome();
   });
 })();
 
-/* 初回ガイド */
-function closeFirstGuide(){
+/* 初回ガイド：iPhoneでも確実に閉じられる実装 */
+window.__closeFirstGuide = function(e){
+  if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
   const overlay=document.getElementById("firstGuide");
   const check=document.getElementById("guideDontShow");
   if(check && check.checked) localStorage.setItem("netplus_guide_seen","1");
   if(overlay){
-    overlay.style.display="none";
+    overlay.style.setProperty("display","none","important");
+    overlay.setAttribute("aria-hidden","true");
     overlay.style.pointerEvents="none";
   }
-}
+  return false;
+};
+window.closeFirstGuide=window.__closeFirstGuide;
 (function(){
   const KEY="netplus_guide_seen";
   const overlay=document.getElementById("firstGuide");
   const btn=document.getElementById("guideStart");
   const check=document.getElementById("guideDontShow");
   if(!overlay || !btn) return;
-
-  function openGuide(){ overlay.style.display="flex"; }
-  function closeGuide(){
-    overlay.style.display="none";
-    if(check && check.checked) localStorage.setItem(KEY,"1");
-  }
-
-  btn.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); closeFirstGuide(); });
-
-  // 既存の「使い方」ボタンがあれば、いつでもガイドを開けるようにする
-  document.addEventListener("click", function(e){
-    const el=e.target.closest("button,a");
+  const openGuide=()=>{
+    overlay.style.removeProperty("display");
+    overlay.style.display="flex";
+    overlay.setAttribute("aria-hidden","false");
+    overlay.style.pointerEvents="auto";
+  };
+  // clickだけでなくpointerup/touchendも受け取り、iPhoneのタップを確実に処理
+  ["pointerup","touchend","click"].forEach(type=>{
+    btn.addEventListener(type,function(e){ window.__closeFirstGuide(e); },{capture:true,passive:false});
+  });
+  document.addEventListener("click",function(e){
+    const el=e.target.closest && e.target.closest("button,a");
     if(!el) return;
     const t=(el.textContent||"").trim();
     if(t.includes("使い方") && !el.closest("#firstGuide")){
-      e.preventDefault();
-      openGuide();
+      e.preventDefault(); e.stopPropagation(); openGuide();
     }
-  });
-
-  if(localStorage.getItem(KEY)!=="1"){
-    setTimeout(openGuide,180);
-  }
+  },true);
+  if(localStorage.getItem(KEY)!== "1") setTimeout(openGuide,180);
 })();
 
 /* 間違い復習 強化 */

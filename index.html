@@ -89,7 +89,7 @@
     <ol><li>🚀 スタート</li><li>🔀 ランダム</li><li>❌ 間違い復習</li><li>📝 模擬試験</li><li>📊 成績</li></ol>
     <p>迷ったらまず「🚀 スタート」がおすすめです。</p>
     <label><input type="checkbox" id="guideDontShow"> 次回から表示しない</label>
-    <button id="guideStart" class="primary" type="button" onclick="closeFirstGuide()">はじめる</button>
+    <button id="guideStart" class="primary" type="button" onclick="window.__closeFirstGuide && window.__closeFirstGuide(event)">はじめる</button>
   </div>
 </div>
 <script src="questions.js"></script>

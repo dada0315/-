@@ -1,7 +1,7 @@
 const $=id=>document.getElementById(id);
 
 let bank=(typeof QUESTIONS!=="undefined"&&Array.isArray(QUESTIONS))?QUESTIONS:[];
-let session=[],idx=0,score=0,answered=false,mode="training",answers=[],lastSession=[],timerId=null,timeLeft=0;
+let session=[],idx=0,score=0,answered=false,mode="training",answers=[],lastSession=[],timerId=null,timeLeft=0,answeredCount=0;
 
 const getWrong=()=>JSON.parse(localStorage.getItem("netplus_wrong")||"[]");
 const saveWrong=a=>localStorage.setItem("netplus_wrong",JSON.stringify([...new Set(a)]));
@@ -46,7 +46,7 @@ function startQuiz(random=false){
   session=pick(n,d,true);
   if(!session.length){alert("問題データを読み込めません。");return}
 
-  idx=0;score=0;answers=[];lastSession=session;
+  idx=0;score=0;answers=[];answeredCount=0;lastSession=session;
   hideAll();$("quiz").classList.remove("hide");
   $("modeBadge").classList.add("hide");$("timer").classList.add("hide");
 
@@ -71,13 +71,14 @@ function startWrong(){
   session=wrongBank.sort(()=>Math.random()-.5);
   current=0;
   score=0;
+  answeredCount=0;
   showQuiz();
   renderQuestion();
 }
 function startMock(){
   if(bank.length<90){alert("問題データが90問未満です。");return}
   stopTimer();mode="mock";session=pick(90,"all",true);
-  idx=0;score=0;answers=new Array(session.length).fill(null);lastSession=session;
+  idx=0;score=0;answers=new Array(session.length).fill(null);answeredCount=0;lastSession=session;
   hideAll();$("quiz").classList.remove("hide");
   $("modeBadge").classList.remove("hide");$("timer").classList.remove("hide");
   startTimer(90*60);render();
@@ -95,6 +96,27 @@ function updateTimer(){
   $("timer").textContent=`残り ${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   $("timer").classList.toggle("ok",timeLeft>600);
 }
+function ensureFinishButton(){
+  let b=document.getElementById("finishEarly");
+  if(b) return b;
+  const next=document.getElementById("next");
+  if(!next) return null;
+  b=document.createElement("button");
+  b.id="finishEarly";
+  b.type="button";
+  b.className="secondary finish-early";
+  b.textContent="⏹ 途中で終了して結果を見る";
+  b.onclick=endSession;
+  next.parentNode.appendChild(b);
+  return b;
+}
+function endSession(){
+  const currentAnswered=mode==="mock" ? answers.filter(a=>a!==null).length : answeredCount;
+  if(!confirm(`現在 ${currentAnswered} / ${session.length}問 を回答済みです。\nここで終了して結果を表示しますか？`))return;
+  if(mode==="mock") finishMock(false);
+  else finishTraining();
+}
+
 function render(){
   answered=false;
   $("next").disabled=(mode!=="mock");
@@ -112,6 +134,11 @@ function render(){
     b.onclick=()=>answer(i);w.appendChild(b);
   });
   $("next").textContent=idx===session.length-1?"結果を見る ▶":"次の問題 ▶";
+  const finishBtn=ensureFinishButton();
+  if(finishBtn){
+    finishBtn.style.display=idx===session.length-1?"none":"block";
+    finishBtn.textContent=mode==="mock"?"⏹ 試験を終了して結果を見る":"⏹ 途中で終了して結果を見る";
+  }
 }
 function answer(choice){
   const q=session[idx];
@@ -128,6 +155,7 @@ function answer(choice){
     if(i===q.a)b.classList.add("correct");
     if(i===choice&&choice!==q.a)b.classList.add("wrong");
   });
+  answeredCount++;
   if(choice===q.a){
     score++;
     saveWrong(getWrong().filter(id=>id!==q.id));
@@ -147,37 +175,50 @@ function nextQuestion(){
   if(idx<session.length-1){idx++;render()}else finishTraining();
 }
 function finishTraining(){
-  const pct=Math.round(score/session.length*100),s=getStats();
-  s.attempts++;s.correct+=score;s.total+=session.length;s.best=Math.max(s.best||0,pct);
+  stopTimer();
+  const totalAnswered=Math.max(0,answeredCount);
+  const pct=totalAnswered?Math.round(score/totalAnswered*100):0,s=getStats();
+  s.attempts++;
+  s.correct+=score;
+  s.total+=totalAnswered;
+  s.best=Math.max(s.best||0,pct);
   localStorage.setItem("netplus_stats",JSON.stringify(s));
-  saveHistory([...getHistory(),{type:mode==="wrong"?"間違い復習":"練習",date:new Date().toLocaleString("ja-JP"),score,total:session.length,pct}]);
+  saveHistory([...getHistory(),{type:mode==="wrong"?"間違い復習":"練習",date:new Date().toLocaleString("ja-JP"),score,total:totalAnswered,pct,answered:totalAnswered,sessionTotal:session.length,partial:totalAnswered<session.length}]);
   hideAll();$("result").classList.remove("hide");
   const remaining=getWrong().length;
+  const partialText=totalAnswered<session.length
+    ?`<div class="stat"><span>回答済み</span><b>${totalAnswered} / ${session.length}問</b></div>`
+    :"";
   $("resultText").innerHTML=mode==="wrong"
-    ?`<div class="stat"><span>間違い復習</span><b>${score} / ${session.length}</b></div>
-      <div class="stat"><span>正解率</span><b>${pct}%</b></div>
+    ?`${partialText}<div class="stat"><span>間違い復習</span><b>${score} / ${totalAnswered}問</b></div>
+      <div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div>
       <div class="stat"><span>残りの間違い問題</span><b>${remaining}問</b></div>
-      <p>${remaining===0?"🎉 間違い問題をすべてクリアしました！":"💪 残っている問題をもう一度復習しよう！"}</p>`
-    :`<div class="stat"><span>正解</span><b>${score} / ${session.length}</b></div>
-      <div class="big">${pct}%</div>
-      <p>${pct>=80?"🔥 かなり良い！":"💪 間違い復習でもう一周しよう！"}</p>`;
+      <p>${totalAnswered<session.length?"⏹ 途中で終了しました。":""}${remaining===0?"🎉 間違い問題をすべてクリアしました！":"💪 残っている問題をもう一度復習しよう！"}</p>`
+    :`${partialText}<div class="stat"><span>正解</span><b>${score} / ${totalAnswered}問</b></div>
+      <div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div>
+      <p>${totalAnswered<session.length?"⏹ 途中で終了しました。":""}${pct>=80?"🔥 かなり良い！":"💪 間違い復習でもう一周しよう！"}</p>`;
   refreshHome();
 }
+
 function finishMock(timeout){
   stopTimer();
-  score=answers.reduce((n,a,i)=>n+(a===session[i].a?1:0),0);
-  const pct=Math.round(score/session.length*100),s=getStats();
+  const totalAnswered=answers.filter(a=>a!==null).length;
+  score=answers.reduce((n,a,i)=>n+(a!==null&&a===session[i].a?1:0),0);
+  const pct=totalAnswered?Math.round(score/totalAnswered*100):0,s=getStats();
   s.mockAttempts=(s.mockAttempts||0)+1;s.mockBest=Math.max(s.mockBest||0,pct);
-  s.attempts++;s.correct+=score;s.total+=session.length;s.best=Math.max(s.best||0,pct);
+  s.attempts++;s.correct+=score;s.total+=totalAnswered;s.best=Math.max(s.best||0,pct);
   localStorage.setItem("netplus_stats",JSON.stringify(s));
-  saveHistory([...getHistory(),{type:"模擬試験",date:new Date().toLocaleString("ja-JP"),score,total:session.length,pct,timeout:!!timeout}]);
+  saveHistory([...getHistory(),{type:"模擬試験",date:new Date().toLocaleString("ja-JP"),score,total:totalAnswered,pct,answered:totalAnswered,sessionTotal:session.length,timeout:!!timeout,partial:totalAnswered<session.length}]);
   hideAll();$("result").classList.remove("hide");
-  $("resultText").innerHTML=`<div class="stat"><span>模擬試験</span><b>${timeout?"⏰ 時間切れ":"完了"}</b></div>
-    <div class="stat"><span>正解</span><b>${score} / ${session.length}</b></div>
-    <div class="big">${pct}%</div>
+  $("resultText").innerHTML=`<div class="stat"><span>模擬試験</span><b>${timeout?"⏰ 時間切れ":"⏹ 終了"}</b></div>
+    <div class="stat"><span>回答済み</span><b>${totalAnswered} / ${session.length}問</b></div>
+    <div class="stat"><span>正解</span><b>${score} / ${totalAnswered}問</b></div>
+    <div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div>
+    <p>${totalAnswered<session.length?"未回答："+(session.length-totalAnswered)+"問":"全問回答済みです。"}</p>
     <button class="primary" onclick="showMockReview()">📖 全問題の解説を見る</button>`;
   refreshHome();
 }
+
 function showMockReview(){
   let html="";
   session.forEach((q,i)=>{

@@ -136,3 +136,70 @@ button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}bu
 .guide-overlay{position:fixed;inset:0;background:#0008;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}.guide-modal{background:#fff;border-radius:20px;padding:22px;max-width:520px;width:100%;max-height:90vh;overflow:auto}
 .domain-stats,.history-list{display:grid;gap:8px}.domain-row,.history-row{padding:10px;border:1px solid var(--line);border-radius:10px}.history-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}.domain-bar{height:6px;background:#e5e7eb;border-radius:8px;margin:7px 0}.domain-bar span{display:block;height:100%;background:var(--accent);border-radius:8px}.small{font-size:13px;color:var(--muted)}.review-item{padding:14px 0;border-bottom:1px solid var(--line)}.review-ok{color:#15803d;font-weight:700}.review-ng{color:#b91c1c;font-weight:700}
 @media(max-width:480px){main{padding:12px 10px 90px}.card{padding:15px}.stats-mini b{font-size:17px}.timer{top:calc(6px + env(safe-area-inset-top))}}
+
+
+/* 初回「はじめての方へ」画面：メインメニューを完全に覆う */
+.guide-overlay,
+#guideOverlay,
+.first-guide,
+#firstGuide {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  box-sizing: border-box !important;
+  background: rgba(0,0,0,.55) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  overflow-y: auto !important;
+  isolation: isolate !important;
+}
+
+.guide-overlay .guide-card,
+#guideOverlay .guide-card,
+.first-guide .guide-card,
+#firstGuide .guide-card {
+  position: relative !important;
+  z-index: 100000 !important;
+  background: #fff !important;
+  opacity: 1 !important;
+  color: #111 !important;
+  width: min(94vw, 560px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+  border-radius: 18px !important;
+  padding: 22px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35) !important;
+}
+
+.guide-overlay::before,
+#guideOverlay::before,
+.first-guide::before,
+#firstGuide::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,.55) !important;
+  z-index: -1 !important;
+}
+
+@media (max-width: 480px) {
+  .guide-overlay,
+  #guideOverlay,
+  .first-guide,
+  #firstGuide {
+    padding: 10px !important;
+  }
+  .guide-overlay .guide-card,
+  #guideOverlay .guide-card,
+  .first-guide .guide-card,
+  #firstGuide .guide-card {
+    width: 96vw !important;
+    max-height: calc(100dvh - 20px) !important;
+    padding: 18px !important;
+  }
+}

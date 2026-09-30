@@ -188,3 +188,35 @@ function resetData(){
 }
 
 refreshHome();
+
+/* 初回ガイド */
+(function(){
+  const KEY="netplus_guide_seen";
+  const overlay=document.getElementById("firstGuide");
+  const btn=document.getElementById("guideStart");
+  const check=document.getElementById("guideDontShow");
+  if(!overlay || !btn) return;
+
+  function openGuide(){ overlay.style.display="flex"; }
+  function closeGuide(){
+    overlay.style.display="none";
+    if(check && check.checked) localStorage.setItem(KEY,"1");
+  }
+
+  btn.addEventListener("click", closeGuide);
+
+  // 既存の「使い方」ボタンがあれば、いつでもガイドを開けるようにする
+  document.addEventListener("click", function(e){
+    const el=e.target.closest("button,a");
+    if(!el) return;
+    const t=(el.textContent||"").trim();
+    if(t.includes("使い方") && !el.closest("#firstGuide")){
+      e.preventDefault();
+      openGuide();
+    }
+  });
+
+  if(localStorage.getItem(KEY)!=="1"){
+    setTimeout(openGuide,180);
+  }
+})();

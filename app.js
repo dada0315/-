@@ -40,8 +40,8 @@ function startQuiz(random=false){
 
   // 🔀 ランダム：分野・出題数の設定に関係なく、問題バンク全体から
   // 1回の学習で重複なしのランダム出題を行う
-  const n=random ? bank.length : +$("count").value;
-  const d=random ? "all" : $("domain").value;
+  const n=+$("count").value;
+  const d=$("domain").value;
 
   session=pick(n,d,true);
   if(!session.length){alert("問題データを読み込めません。");return}
@@ -51,7 +51,7 @@ function startQuiz(random=false){
   $("modeBadge").classList.add("hide");$("timer").classList.add("hide");
 
   // ランダム学習中であることを表示
-  $("modeBadge").textContent=random ? "🔀 ランダム500問" : "";
+  $("modeBadge").textContent=random ? `🔀 ランダム${session.length}問` : "";
   if(random)$("modeBadge").classList.remove("hide");
 
   render();
@@ -69,11 +69,14 @@ function startWrong(){
   }
 
   session=wrongBank.sort(()=>Math.random()-.5);
-  current=0;
+  idx=0;
   score=0;
   answeredCount=0;
-  showQuiz();
-  renderQuestion();
+  answers=[];
+  hideAll();$("quiz").classList.remove("hide");
+  $("modeBadge").textContent="❌ 間違い復習";$("modeBadge").classList.remove("hide");
+  $("timer").classList.add("hide");
+  render();
 }
 function startMock(){
   if(bank.length<90){alert("問題データが90問未満です。");return}
@@ -230,7 +233,7 @@ function restart(){
 function showStats(){
   stopTimer();
   hideAll();
-  $("statsSection").style.display="block";
+  $("stats").classList.remove("hide");
 
   const s=JSON.parse(localStorage.getItem("netplus_stats")||'{"total":0,"correct":0,"best":0,"mock":0,"mockBest":0}');
   const h=JSON.parse(localStorage.getItem("netplus_history")||"[]");
@@ -240,7 +243,7 @@ function showStats(){
   const correct=Number(s.correct)||0;
   const accuracy=total?Math.round(correct/total*100):0;
   const best=Math.max(Number(s.best)||0,accuracy);
-  const mockCount=Number(s.mock)||0;
+  const mockCount=Number(s.mockAttempts||s.mock)||0;
   const mockBest=Number(s.mockBest)||0;
   const practiceCount=h.filter(x=>x && x.mode!=="mock").length;
 
@@ -282,7 +285,7 @@ function showStats(){
     '<div class="history-list">'+
     (h.slice(0,20).map(function(x){
       const pct=Number(x.percent!=null?x.percent:(x.accuracy||0));
-      const label=x.mode==="mock"?"📝 模擬試験":"📚 練習";
+      const label=(x.type==="模擬試験"||x.mode==="mock")?"📝 模擬試験":"📚 練習";
       const detail=x.count!=null?((x.correct||0)+"/"+x.count+"問"):"";
       return '<div class="history-row"><span>'+label+'</span><span>'+detail+
         '</span><b>'+pct+'%</b><small>'+(x.date||x.time||"")+'</small></div>';

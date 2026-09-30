@@ -22,19 +22,38 @@ function goHome(){
   stopTimer();hideAll();$("home").classList.remove("hide");refreshHome();
 }
 function showGuide(){hideAll();$("guide").classList.remove("hide")}
+function shuffle(a){
+  const arr=[...a];
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
 function pick(n,d,randomize=true){
   let a=bank.filter(q=>d==="all"||q.domain===d);
-  if(randomize)a.sort(()=>Math.random()-.5);
+  if(randomize)a=shuffle(a);
   return a.slice(0,Math.min(n,a.length));
 }
 function startQuiz(random=false){
   stopTimer();mode="training";
-  const n=+$("count").value,d=$("domain").value;
+
+  // 🔀 ランダム：分野・出題数の設定に関係なく、問題バンク全体から
+  // 1回の学習で重複なしのランダム出題を行う
+  const n=random ? bank.length : +$("count").value;
+  const d=random ? "all" : $("domain").value;
+
   session=pick(n,d,true);
   if(!session.length){alert("問題データを読み込めません。");return}
+
   idx=0;score=0;answers=[];lastSession=session;
   hideAll();$("quiz").classList.remove("hide");
   $("modeBadge").classList.add("hide");$("timer").classList.add("hide");
+
+  // ランダム学習中であることを表示
+  $("modeBadge").textContent=random ? "🔀 ランダム500問" : "";
+  if(random)$("modeBadge").classList.remove("hide");
+
   render();
 }
 function startWrong(){
@@ -261,6 +280,29 @@ function resetData(){
 }
 
 refreshHome();
+
+/* 🔀 ランダム500問 強化
+   - 問題バンク全体から出題
+   - 同一回の中で重複なし
+   - Fisher-Yatesでシャッフル
+   - 500問未満の問題バンクなら全問題を出題
+*/
+(function(){
+  const randomButtons=[...document.querySelectorAll("button,a")].filter(el=>
+    (el.textContent||"").includes("ランダム")
+  );
+  randomButtons.forEach(el=>{
+    el.addEventListener("click",function(){
+      setTimeout(function(){
+        const badge=document.getElementById("modeBadge");
+        if(badge && !document.getElementById("quiz").classList.contains("hide")){
+          badge.textContent=`🔀 ランダム${bank.length}問`;
+          badge.classList.remove("hide");
+        }
+      },30);
+    });
+  });
+})();
 
 /* 初回ガイド */
 (function(){

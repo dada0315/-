@@ -240,3 +240,8 @@ button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}bu
 #guideStart{appearance:none;-webkit-appearance:none;display:block!important;width:100%;min-height:52px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;pointer-events:auto!important;position:relative!important;z-index:100003!important;}
 #firstGuide{pointer-events:auto!important;}
 #firstGuide .guide-modal{pointer-events:auto!important;touch-action:auto;}
+
+/* 初回ガイド最終版：操作領域を明確化 */
+#firstGuide{pointer-events:auto!important;touch-action:auto!important;}
+#firstGuide .guide-modal{pointer-events:auto!important;position:relative!important;z-index:100001!important;background:#fff!important;}
+#guideStart{pointer-events:auto!important;touch-action:manipulation!important;position:relative!important;z-index:100002!important;display:block!important;width:100%!important;min-height:56px!important;}

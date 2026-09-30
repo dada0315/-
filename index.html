@@ -89,10 +89,33 @@
     <ol><li>🚀 スタート</li><li>🔀 ランダム</li><li>❌ 間違い復習</li><li>📝 模擬試験</li><li>📊 成績</li></ol>
     <p>迷ったらまず「🚀 スタート」がおすすめです。</p>
     <label><input type="checkbox" id="guideDontShow"> 次回から表示しない</label>
-    <button id="guideStart" class="primary" type="button" onclick="window.__closeFirstGuide && window.__closeFirstGuide(event)">はじめる</button>
+    <button id="guideStart" class="primary" type="button" >はじめる</button>
   </div>
 </div>
 <script src="questions.js"></script>
 <script src="app.js"></script>
+
+<script>
+(function(){
+  function closeGuide(){
+    var o=document.getElementById("firstGuide");
+    var c=document.getElementById("guideDontShow");
+    if(c && c.checked) localStorage.setItem("netplus_guide_seen","1");
+    if(o){ o.style.display="none"; o.hidden=true; o.setAttribute("aria-hidden","true"); }
+  }
+  function bind(){
+    var b=document.getElementById("guideStart");
+    if(!b) return;
+    b.onclick=closeGuide;
+    b.ontouchend=function(e){ e.preventDefault(); closeGuide(); };
+    b.onpointerup=function(e){ if(e.pointerType!=="mouse"){ e.preventDefault(); closeGuide(); } };
+  }
+  bind();
+  document.addEventListener("click",function(e){
+    var b=e.target && e.target.closest ? e.target.closest("#guideStart") : null;
+    if(b){ e.preventDefault(); closeGuide(); }
+  },true);
+})();
+</script>
 </body>
 </html>

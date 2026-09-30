@@ -230,3 +230,8 @@ button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}bu
   z-index:100002 !important;
   pointer-events:auto !important;
 }
+
+/* はじめての方へ：ボタンを確実にタップ可能にする */
+#firstGuide{pointer-events:auto !important;}
+#firstGuide .guide-modal{pointer-events:auto !important;position:relative !important;z-index:100001 !important;}
+#guideStart{display:block !important;pointer-events:auto !important;position:relative !important;z-index:100002 !important;touch-action:manipulation !important;cursor:pointer !important;}

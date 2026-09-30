@@ -336,6 +336,15 @@ refreshHome();
 })();
 
 /* 初回ガイド */
+function closeFirstGuide(){
+  const overlay=document.getElementById("firstGuide");
+  const check=document.getElementById("guideDontShow");
+  if(check && check.checked) localStorage.setItem("netplus_guide_seen","1");
+  if(overlay){
+    overlay.style.display="none";
+    overlay.style.pointerEvents="none";
+  }
+}
 (function(){
   const KEY="netplus_guide_seen";
   const overlay=document.getElementById("firstGuide");
@@ -349,7 +358,7 @@ refreshHome();
     if(check && check.checked) localStorage.setItem(KEY,"1");
   }
 
-  btn.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); closeGuide(); });
+  btn.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); closeFirstGuide(); });
 
   // 既存の「使い方」ボタンがあれば、いつでもガイドを開けるようにする
   document.addEventListener("click", function(e){

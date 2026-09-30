@@ -97,19 +97,9 @@ function updateTimer(){
   $("timer").classList.toggle("ok",timeLeft>600);
 }
 function ensureFinishButton(){
-  let b=document.getElementById("finishEarly");
-  if(b) return b;
-  const next=document.getElementById("next");
-  if(!next) return null;
-  b=document.createElement("button");
-  b.id="finishEarly";
-  b.type="button";
-  b.className="secondary finish-early";
-  b.textContent="⏹ 途中で終了して結果を見る";
-  b.onclick=endSession;
-  next.parentNode.appendChild(b);
-  return b;
+  return document.getElementById("finishEarly");
 }
+
 function endSession(){
   const currentAnswered=mode==="mock" ? answers.filter(a=>a!==null).length : answeredCount;
   if(!confirm(`現在 ${currentAnswered} / ${session.length}問 を回答済みです。\nここで終了して結果を表示しますか？`))return;
@@ -337,7 +327,7 @@ refreshHome();
       setTimeout(function(){
         const badge=document.getElementById("modeBadge");
         if(badge && !document.getElementById("quiz").classList.contains("hide")){
-          badge.textContent=`🔀 ランダム${bank.length}問`;
+          badge.textContent=`🔀 ランダム${session.length}問`;
           badge.classList.remove("hide");
         }
       },30);

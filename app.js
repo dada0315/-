@@ -170,17 +170,82 @@ function restart(){
   else startQuiz(false);
 }
 function showStats(){
-  const s=getStats(),h=getHistory().slice().reverse(),rate=s.total?Math.round(s.correct/s.total*100):0;
-  hideAll();$("stats").classList.remove("hide");
-  $("statsBody").innerHTML=`<div class="stat"><span>受験回数</span><b>${s.attempts}</b></div>
-    <div class="stat"><span>累計正解率</span><b>${rate}%</b></div>
-    <div class="stat"><span>最高正解率</span><b>${s.best||0}%</b></div>
-    <div class="stat"><span>模擬試験回数</span><b>${s.mockAttempts||0}</b></div>
-    <div class="stat"><span>模擬試験最高</span><b>${s.mockBest||0}%</b></div>
-    <div class="stat"><span>間違い保存</span><b>${getWrong().length}問</b></div>`;
-  $("history").innerHTML="<h3>📚 最近の成績（最大20件）</h3>"+(h.length?h.map(x=>
-    `<div class="history-row"><span>${x.type}<br><span class="small">${x.date}${x.timeout?"・時間切れ":""}</span></span><b>${x.score}/${x.total}<br>${x.pct}%</b></div>`).join(""):"<p class='small'>まだ成績がありません。</p>");
+  stopTimer();
+  hideAll();
+  $("statsSection").style.display="block";
+
+  const s=JSON.parse(localStorage.getItem("netplus_stats")||'{"total":0,"correct":0,"best":0,"mock":0,"mockBest":0}');
+  const h=JSON.parse(localStorage.getItem("netplus_history")||"[]");
+  const wrong=JSON.parse(localStorage.getItem("netplus_wrong")||"[]");
+
+  const total=Number(s.total)||0;
+  const correct=Number(s.correct)||0;
+  const accuracy=total?Math.round(correct/total*100):0;
+  const best=Math.max(Number(s.best)||0,accuracy);
+  const mockCount=Number(s.mock)||0;
+  const mockBest=Number(s.mockBest)||0;
+  const practiceCount=h.filter(x=>x && x.mode!=="mock").length;
+
+  const domains=[
+    "ネットワークの基礎",
+    "ネットワークの実装",
+    "ネットワークの運用",
+    "ネットワークセキュリティ",
+    "トラブルシューティング"
+  ];
+  const dm={};
+  domains.forEach(d=>dm[d]={n:0,c:0});
+  h.forEach(x=>{
+    if(x && dm[x.domain]){
+      dm[x.domain].n += Number(x.count)||0;
+      dm[x.domain].c += Number(x.correct)||0;
+    }
+  });
+
+  $("statsContent").innerHTML =
+    '<div class="stats-grid">'+
+    card("📚 累計学習問題",total,"問")+
+    card("🎯 累計正解率",accuracy,"%")+
+    card("🏆 最高正解率",best,"%")+
+    card("📖 学習回数",practiceCount,"回")+
+    card("📝 模擬試験",mockCount,"回")+
+    card("⭐ 模試最高得点",mockBest,"%")+
+    card("❌ 間違い保存",wrong.length,"問")+
+    '</div>'+
+    '<h3 class="stats-title">📚 分野別成績</h3>'+
+    '<div class="domain-stats">'+domains.map(function(d){
+      const v=dm[d], pct=v.n?Math.round(v.c/v.n*100):0;
+      return '<div class="domain-row"><div class="domain-name">'+d+
+        '</div><div class="domain-bar"><span style="width:'+pct+'%"></span></div>'+
+        '<div class="domain-percent">'+pct+'%</div><div class="domain-detail">'+
+        (v.n?(v.c+'/'+v.n+'問'):"まだ記録なし")+'</div></div>';
+    }).join("")+'</div>'+
+    '<h3 class="stats-title">🕒 最近の学習履歴</h3>'+
+    '<div class="history-list">'+
+    (h.slice(0,20).map(function(x){
+      const pct=Number(x.percent!=null?x.percent:(x.accuracy||0));
+      const label=x.mode==="mock"?"📝 模擬試験":"📚 練習";
+      const detail=x.count!=null?((x.correct||0)+"/"+x.count+"問"):"";
+      return '<div class="history-row"><span>'+label+'</span><span>'+detail+
+        '</span><b>'+pct+'%</b><small>'+(x.date||x.time||"")+'</small></div>';
+    }).join("") || '<div class="empty-history">まだ学習履歴がありません。</div>')+
+    '</div>'+
+    '<button class="reset-stats-btn" id="resetStatsBtn">🗑 成績をリセット</button>';
+
+  const rb=document.getElementById("resetStatsBtn");
+  if(rb) rb.onclick=function(){
+    if(confirm("成績と学習履歴をリセットしますか？")){
+      localStorage.removeItem("netplus_stats");
+      localStorage.removeItem("netplus_history");
+      showStats();
+    }
+  };
 }
+function card(label,value,unit){
+  return '<div class="stat-card"><div class="stat-label">'+label+
+    '</div><div class="stat-value">'+value+'</div><div class="stat-sub">'+unit+'</div></div>';
+}
+
 function resetData(){
   if(!confirm("成績・間違い問題・成績履歴をすべてリセットします。\n\n本当にリセットしますか？"))return;
   localStorage.removeItem("netplus_stats");localStorage.removeItem("netplus_wrong");localStorage.removeItem("netplus_history");

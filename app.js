@@ -149,6 +149,9 @@ function answer(choice){
     if(i===choice&&choice!==q.a)b.classList.add("wrong");
   });
   answeredCount++;
+  const logItem={domain:q.domain||"その他",correct:choice===q.a};
+  const sessionLog=JSON.parse(localStorage.getItem("netplus_session_answers")||"[]"); sessionLog.push(logItem); localStorage.setItem("netplus_session_answers",JSON.stringify(sessionLog));
+  const lastLog=JSON.parse(localStorage.getItem("netplus_last_answers")||"[]"); lastLog.push(logItem); localStorage.setItem("netplus_last_answers",JSON.stringify(lastLog.slice(-1000)));
   if(choice===q.a){
     score++;
     saveWrong(getWrong().filter(id=>id!==q.id));
@@ -176,20 +179,50 @@ function finishTraining(){
   s.total+=totalAnswered;
   s.best=Math.max(s.best||0,pct);
   localStorage.setItem("netplus_stats",JSON.stringify(s));
-  saveHistory([...getHistory(),{type:mode==="wrong"?"間違い復習":"練習",date:new Date().toLocaleString("ja-JP"),score,total:totalAnswered,pct,answered:totalAnswered,sessionTotal:session.length,partial:totalAnswered<session.length}]);
+
+  // 分野別の実績を保存
+  const domainStats=JSON.parse(localStorage.getItem("netplus_domain_stats")||"{}");
+  const perDomain={};
+  session.slice(0,totalAnswered).forEach((q,i)=>{
+    const d=q.domain||"その他";
+    if(!perDomain[d])perDomain[d]={total:0,correct:0};
+    perDomain[d].total++;
+    if(answers[i]===q.a || (mode!=="mock" && answers[i]===undefined && i<answeredCount && q && lastSession[i]===q)){
+      // 通常練習は answers に保存していないため、下の回答記録から補正する
+    }
+  });
+  // 通常練習では回答時に per-question の記録を作る
+  const answerLog=JSON.parse(localStorage.getItem("netplus_last_answers")||"[]");
+  if(answerLog.length){
+    answerLog.slice(-totalAnswered).forEach(a=>{
+      const d=a.domain||"その他";
+      if(!domainStats[d])domainStats[d]={total:0,correct:0};
+      domainStats[d].total++;
+      if(a.correct)domainStats[d].correct++;
+    });
+  }
+  localStorage.setItem("netplus_domain_stats",JSON.stringify(domainStats));
+  localStorage.removeItem("netplus_last_answers");
+
+  const history=getHistory();
+  const domains={};
+  session.slice(0,totalAnswered).forEach(q=>{
+    const d=q.domain||"その他";
+    if(!domains[d])domains[d]={total:0,correct:0};
+    domains[d].total++;
+  });
+  // scoreの正誤を履歴に残すため、直近回答ログを使う
+  const recentAnswers=JSON.parse(localStorage.getItem("netplus_session_answers")||"[]");
+  recentAnswers.forEach(a=>{ if(domains[a.domain]){ if(a.correct)domains[a.domain].correct++; } });
+  localStorage.removeItem("netplus_session_answers");
+  saveHistory([...history,{type:mode==="wrong"?"間違い復習":"練習",date:new Date().toLocaleString("ja-JP"),score,total:totalAnswered,pct,answered:totalAnswered,sessionTotal:session.length,partial:totalAnswered<session.length,domains}]);
   hideAll();$("result").classList.remove("hide");
   const remaining=getWrong().length;
   const partialText=totalAnswered<session.length
-    ?`<div class="stat"><span>回答済み</span><b>${totalAnswered} / ${session.length}問</b></div>`
-    :"";
+    ?`<div class="stat"><span>回答済み</span><b>${totalAnswered} / ${session.length}問</b></div>`:"";
   $("resultText").innerHTML=mode==="wrong"
-    ?`${partialText}<div class="stat"><span>間違い復習</span><b>${score} / ${totalAnswered}問</b></div>
-      <div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div>
-      <div class="stat"><span>残りの間違い問題</span><b>${remaining}問</b></div>
-      <p>${totalAnswered<session.length?"⏹ 途中で終了しました。":""}${remaining===0?"🎉 間違い問題をすべてクリアしました！":"💪 残っている問題をもう一度復習しよう！"}</p>`
-    :`${partialText}<div class="stat"><span>正解</span><b>${score} / ${totalAnswered}問</b></div>
-      <div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div>
-      <p>${totalAnswered<session.length?"⏹ 途中で終了しました。":""}${pct>=80?"🔥 かなり良い！":"💪 間違い復習でもう一周しよう！"}</p>`;
+    ?`${partialText}<div class="stat"><span>間違い復習</span><b>${score} / ${totalAnswered}問</b></div><div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div><div class="stat"><span>残りの間違い問題</span><b>${remaining}問</b></div><p>${totalAnswered<session.length?"⏹ 途中で終了しました。":""}${remaining===0?"🎉 間違い問題をすべてクリアしました！":"💪 残っている問題をもう一度復習しよう！"}</p>`
+    :`${partialText}<div class="stat"><span>正解</span><b>${score} / ${totalAnswered}問</b></div><div class="stat"><span>正解率（回答済み）</span><b>${pct}%</b></div><p>${totalAnswered<session.length?"⏹ 途中で終了しました。":""}${pct>=80?"🔥 かなり良い！":"💪 間違い復習でもう一周しよう！"}</p>`;
   refreshHome();
 }
 
@@ -231,77 +264,41 @@ function restart(){
   else startQuiz(false);
 }
 function showStats(){
-  stopTimer();
-  hideAll();
-  $("stats").classList.remove("hide");
-
-  const s=JSON.parse(localStorage.getItem("netplus_stats")||'{"total":0,"correct":0,"best":0,"mock":0,"mockBest":0}');
-  const h=JSON.parse(localStorage.getItem("netplus_history")||"[]");
-  const wrong=JSON.parse(localStorage.getItem("netplus_wrong")||"[]");
-
-  const total=Number(s.total)||0;
-  const correct=Number(s.correct)||0;
+  stopTimer(); hideAll(); $("stats").classList.remove("hide");
+  const s=getStats(), h=getHistory(), wrong=getWrong();
+  const total=Number(s.total)||0, correct=Number(s.correct)||0;
   const accuracy=total?Math.round(correct/total*100):0;
   const best=Math.max(Number(s.best)||0,accuracy);
-  const mockCount=Number(s.mockAttempts||s.mock)||0;
-  const mockBest=Number(s.mockBest)||0;
-  const practiceCount=h.filter(x=>x && x.mode!=="mock").length;
-
-  const domains=[
-    "ネットワークの基礎",
-    "ネットワークの実装",
-    "ネットワークの運用",
-    "ネットワークセキュリティ",
-    "トラブルシューティング"
-  ];
-  const dm={};
-  domains.forEach(d=>dm[d]={n:0,c:0});
-  h.forEach(x=>{
-    if(x && dm[x.domain]){
-      dm[x.domain].n += Number(x.count)||0;
-      dm[x.domain].c += Number(x.correct)||0;
-    }
-  });
-
-  $("statsContent").innerHTML =
-    '<div class="stats-grid">'+
-    card("📚 累計学習問題",total,"問")+
-    card("🎯 累計正解率",accuracy,"%")+
-    card("🏆 最高正解率",best,"%")+
-    card("📖 学習回数",practiceCount,"回")+
-    card("📝 模擬試験",mockCount,"回")+
-    card("⭐ 模試最高得点",mockBest,"%")+
-    card("❌ 間違い保存",wrong.length,"問")+
-    '</div>'+
-    '<h3 class="stats-title">📚 分野別成績</h3>'+
-    '<div class="domain-stats">'+domains.map(function(d){
-      const v=dm[d], pct=v.n?Math.round(v.c/v.n*100):0;
-      return '<div class="domain-row"><div class="domain-name">'+d+
-        '</div><div class="domain-bar"><span style="width:'+pct+'%"></span></div>'+
-        '<div class="domain-percent">'+pct+'%</div><div class="domain-detail">'+
-        (v.n?(v.c+'/'+v.n+'問'):"まだ記録なし")+'</div></div>';
-    }).join("")+'</div>'+
-    '<h3 class="stats-title">🕒 最近の学習履歴</h3>'+
-    '<div class="history-list">'+
-    (h.slice(0,20).map(function(x){
-      const pct=Number(x.percent!=null?x.percent:(x.accuracy||0));
-      const label=(x.type==="模擬試験"||x.mode==="mock")?"📝 模擬試験":"📚 練習";
-      const detail=x.count!=null?((x.correct||0)+"/"+x.count+"問"):"";
-      return '<div class="history-row"><span>'+label+'</span><span>'+detail+
-        '</span><b>'+pct+'%</b><small>'+(x.date||x.time||"")+'</small></div>';
-    }).join("") || '<div class="empty-history">まだ学習履歴がありません。</div>')+
-    '</div>'+
-    '<button class="reset-stats-btn" id="resetStatsBtn">🗑 成績をリセット</button>';
-
+  const mockCount=Number(s.mockAttempts||0), mockBest=Number(s.mockBest||0);
+  const practiceCount=h.filter(x=>x && x.type!=="模擬試験" && x.mode!=="mock").length;
+  const domains=["ネットワークの基礎","ネットワークの実装","ネットワークの運用","ネットワークセキュリティ","トラブルシューティング"];
+  const dm=JSON.parse(localStorage.getItem("netplus_domain_stats")||"{}");
+  const trend=h.slice(-10);
+  const trendHtml=trend.length?trend.map((x,i)=>{
+    const p=Number(x.pct)||0; return `<div class="trend-row"><span>${i+1}</span><div class="trend-track"><span style="width:${p}%"></span></div><b>${p}%</b></div>`;
+  }).join(""): '<div class="empty-history">まだ学習記録がありません。</div>';
+  const domainHtml=domains.map(d=>{
+    const v=dm[d]||{total:0,correct:0}; const p=v.total?Math.round(v.correct/v.total*100):0;
+    return `<div class="domain-row"><div class="domain-head"><b>${d}</b><strong>${p}%</strong></div><div class="domain-bar"><span style="width:${p}%"></span></div><div class="domain-detail">${v.total?v.correct+" / "+v.total+"問":"まだ記録なし"}</div></div>`;
+  }).join("");
+  const recent=h.slice().reverse().slice(0,10).map(x=>{
+    const label=x.type||"練習", p=Number(x.pct)||0, total=Number(x.total)||0, sc=Number(x.score)||0;
+    return `<div class="history-row"><span>${label}</span><span>${sc}/${total}問</span><b>${p}%</b><small>${x.date||""}</small></div>`;
+  }).join("") || '<div class="empty-history">まだ学習履歴がありません。</div>';
+  const weak=domains.map(d=>{const v=dm[d]||{total:0,correct:0};return {d,p:v.total?Math.round(v.correct/v.total*100):0,n:v.total}}).filter(x=>x.n).sort((a,b)=>a.p-b.p);
+  const weakHtml=weak.length?`<div class="weak-box">⚠️ 現在の最低正解率：<b>${weak[0].d}</b>（${weak[0].p}%）</div>`:'<div class="weak-box">📚 まだ分野別データがありません。</div>';
+  $("statsContent").innerHTML=`
+    <div class="stats-grid">
+      ${card("📚 累計回答",total,"問")}${card("🎯 累計正解率",accuracy,"%")}${card("🏆 最高正解率",best,"%")}${card("📖 学習回数",practiceCount,"回")}${card("📝 模擬試験",mockCount,"回")}${card("⭐ 模試最高",mockBest,"%")}${card("❌ 間違い保存",wrong.length,"問")}
+    </div>
+    <h3 class="stats-title">📈 正解率の推移（直近10回）</h3><div class="trend-chart">${trendHtml}</div>
+    <h3 class="stats-title">📚 分野別正解率</h3><div class="domain-stats">${domainHtml}</div>${weakHtml}
+    <h3 class="stats-title">🕒 最近の学習履歴</h3><div class="history-list">${recent}</div>
+    <button class="reset-stats-btn" id="resetStatsBtn">🗑 成績をリセット</button>`;
   const rb=document.getElementById("resetStatsBtn");
-  if(rb) rb.onclick=function(){
-    if(confirm("成績と学習履歴をリセットしますか？")){
-      localStorage.removeItem("netplus_stats");
-      localStorage.removeItem("netplus_history");
-      showStats();
-    }
-  };
+  if(rb) rb.onclick=function(){if(confirm("成績と学習履歴をリセットしますか？")){localStorage.removeItem("netplus_stats");localStorage.removeItem("netplus_history");localStorage.removeItem("netplus_domain_stats");showStats();}};
 }
+
 function card(label,value,unit){
   return '<div class="stat-card"><div class="stat-label">'+label+
     '</div><div class="stat-value">'+value+'</div><div class="stat-sub">'+unit+'</div></div>';

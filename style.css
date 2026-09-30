@@ -83,3 +83,30 @@ footer button{flex:1;padding:10px;min-height:48px;font-size:14px}
 
 /* 間違い復習バッジ */
 .wrong-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;margin-left:6px;border-radius:99px;font-size:11px;font-weight:800;background:#eee;vertical-align:middle}
+
+.mock-exam-bar{
+  position:fixed;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:9998;
+  width:min(520px,calc(100% - 20px));
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f5f5f5;
+  border:1px solid #ddd;
+  box-shadow:0 4px 14px rgba(0,0,0,.14);
+  font-weight:800;
+}
+.mock-exam-bar button{border:0;border-radius:9px;padding:8px 10px;font-weight:700;cursor:pointer}
+#quizSection{padding-top:62px}
+@media(max-width:430px){
+  .mock-exam-bar{top:6px;font-size:13px}
+  .mock-exam-bar button{padding:7px 8px}
+  #quizSection{padding-top:58px}
+}

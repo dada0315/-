@@ -349,7 +349,7 @@ refreshHome();
     if(check && check.checked) localStorage.setItem(KEY,"1");
   }
 
-  btn.addEventListener("click", closeGuide);
+  btn.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); closeGuide(); });
 
   // 既存の「使い方」ボタンがあれば、いつでもガイドを開けるようにする
   document.addEventListener("click", function(e){

@@ -38,14 +38,22 @@ function startQuiz(random=false){
   render();
 }
 function startWrong(){
-  stopTimer();mode="wrong";
-  const ids=getWrong(),n=+$("count").value;
-  session=bank.filter(q=>ids.includes(q.id)).sort(()=>Math.random()-.5).slice(0,n);
-  if(!session.length){alert("間違い問題はまだありません。まず問題を解いてみよう！");return}
-  idx=0;score=0;answers=[];lastSession=session;
-  hideAll();$("quiz").classList.remove("hide");
-  $("modeBadge").classList.add("hide");$("timer").classList.add("hide");
-  render();
+  stopTimer();
+  mode="wrong";
+  const ids=JSON.parse(localStorage.getItem("netplus_wrong")||"[]");
+  const unique=[...new Set(ids)];
+  const wrongBank=unique.map(id=>bank.find(q=>String(q.id)===String(id))).filter(Boolean);
+
+  if(!wrongBank.length){
+    alert("現在、間違い保存されている問題はありません。");
+    return;
+  }
+
+  session=wrongBank.sort(()=>Math.random()-.5);
+  current=0;
+  score=0;
+  showQuiz();
+  renderQuestion();
 }
 function startMock(){
   if(bank.length<90){alert("問題データが90問未満です。");return}
@@ -284,4 +292,33 @@ refreshHome();
   if(localStorage.getItem(KEY)!=="1"){
     setTimeout(openGuide,180);
   }
+})();
+
+/* 間違い復習 強化 */
+(function(){
+  function wrongCount(){
+    try{
+      return [...new Set(JSON.parse(localStorage.getItem("netplus_wrong")||"[]"))].length;
+    }catch(e){ return 0; }
+  }
+  function updateWrongBadge(){
+    const buttons=[...document.querySelectorAll("button,a")];
+    buttons.forEach(el=>{
+      const t=(el.textContent||"").trim();
+      if(t.includes("間違い復習") && !el.querySelector(".wrong-badge")){
+        const b=document.createElement("span");
+        b.className="wrong-badge";
+        el.appendChild(b);
+      }
+      if(t.includes("間違い復習")){
+        const b=el.querySelector(".wrong-badge");
+        if(b) b.textContent=wrongCount();
+      }
+    });
+  }
+  document.addEventListener("click",function(){
+    setTimeout(updateWrongBadge,50);
+  });
+  setInterval(updateWrongBadge,1000);
+  setTimeout(updateWrongBadge,300);
 })();

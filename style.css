@@ -80,3 +80,6 @@ footer button{flex:1;padding:10px;min-height:48px;font-size:14px}
 .empty-history{padding:18px;text-align:center;color:#777}
 .reset-stats-btn{margin-top:18px;width:100%;padding:11px;border:0;border-radius:10px;cursor:pointer}
 @media(max-width:430px){.stats-grid{grid-template-columns:1fr 1fr}.stat-value{font-size:24px}}
+
+/* 間違い復習バッジ */
+.wrong-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;margin-left:6px;border-radius:99px;font-size:11px;font-weight:800;background:#eee;vertical-align:middle}
